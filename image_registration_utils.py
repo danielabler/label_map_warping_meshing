@@ -12,6 +12,7 @@ def ants_apply_transforms(input_img, reference_img, output_file, transforms, int
     if shorten_paths:
         img_paths = [input_img, reference_img, output_file]
         transform_paths = transforms
+        #print(img_paths + transform_paths)
         common_prefix = os.path.commonprefix(img_paths + transform_paths)
         if not len(common_prefix)==0:
             common_prefix = os.path.dirname(common_prefix)

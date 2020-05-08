@@ -8,7 +8,7 @@ def get_file_extension(path_to_file):
     :param path_to_file: path to file to be tested
     :return: string or None
     """
-    # need to test_cases for existence of '.'
+    # need to sandbox for existence of '.'
     # return None of component has no file extension
     file_name = os.path.split(path_to_file)[-1]
     file_name_split = file_name.split(".")

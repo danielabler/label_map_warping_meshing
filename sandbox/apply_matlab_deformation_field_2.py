@@ -229,140 +229,81 @@ def resample_image(image_in, size_new):
     return image_resampled
 
 
-#-- create Cylinder & save as surface mesh
-cylinder = vtk.vtkCylinderSource()
-cylinder.SetResolution(30)
-cylinder.SetRadius(5)
-cylinder.SetCenter(0,0,0)
-cylinder.SetHeight(50)
-cylinder.Update()
-cylinder_vtk = cylinder.GetOutput()
-
-path_surface_mesh = os.path.join(config.output_dir_testing, 'surface_mesh.vtp')
-fu.ensure_dir_exists(path_surface_mesh)
-write_vtk_data(cylinder_vtk, path_surface_mesh)
-
-#-- create image from surface mesh
-input_vtp = read_vtk_data(path_surface_mesh)
-path_image_input_vti = os.path.join(config.output_dir_testing, 'input_image_undef.vti')
-input_image_from_mesh_vti = create_image_from_vtp(input_vtp,
-                                                  spacing=[0.5, 0.5, 0.5],
-                                                  bounds=[-10,10,-30,30,-10,10],
-                                                  path_to_image=path_image_input_vti, label=1)
-
-path_image_undef = os.path.join(config.output_dir_testing, 'input_image_undef.mha')
-input_image_undef = convert_vti_to_img(input_image_from_mesh_vti, array_name='ImageScalars', RGB=False, invert_values=False)
-sitk.WriteImage(input_image_undef, path_image_undef)
+def coord_array_to_vtk(coord_array):
+    n_points = coord_array.shape[0]
+    points = vtk.vtkPoints()
+    points.SetNumberOfPoints(n_points)
+    lines = vtk.vtkCellArray()
+    for i in range(n_points):
+        points.SetPoint(i, *coord_array[i, :])
+        lines.InsertNextCell(1)  # number of points
+        lines.InsertCellPoint(i)
+    line = vtk.vtkPolyData()
+    line.SetPoints(points)
+    line.SetLines(lines)
+    return line
 
 
 #-- Reload input image
+output_dir = os.path.join(config.output_dir_testing, 'new')
+
+path_image_undef = os.path.join(output_dir, 'input_image_undef.mha')
 input_image_undef = sitk.ReadImage(path_image_undef)
 
-#-- extend size of input image to cover space of final deformed image
-# currently try & error, displacement field needs to be defined over same space
-origin_undef, size_undef, spacing_undef, extent_undef, dim, vdim = get_measures_from_image(input_image_undef)
 
-extent_def = np.array([[-10,-30,-10],
-                       [100, 30, 10]])
-size_def   = (extent_def[1,:] - extent_def[0,:]) / spacing_undef
-size_def   = list(size_def.astype(np.uint8))
-origin_def = origin_undef
+import scipy.io as sio
 
-image_ref = sitk.Image([220,120,40], input_image_undef.GetPixelIDValue())
-image_ref.SetOrigin(origin_def)
-image_ref.SetSpacing(input_image_undef.GetSpacing())
-image_ref.SetDirection(input_image_undef.GetDirection())
-
-input_image_undef_resampled = sitk.Resample(input_image_undef, image_ref)
-path_image_undef_resampled = os.path.join(config.output_dir_testing, 'input_image_undef_resampled.mha')
-sitk.WriteImage(input_image_undef_resampled, path_image_undef_resampled)
-
-#-- create displacement field (needs to cover space of final output image)
-coord_array_flat, value_array_flat = get_coord_value_array_for_image(input_image_undef_resampled, flat=True)
-
-disp_array_flat = np.zeros(coord_array_flat.shape)
-for i in range(coord_array_flat.shape[0]):
-    x, y, z = coord_array_flat[i, :]
-    u_x     = 0.1*y*y
-    u_y     = 0.0
-    u_z     = 0.5*y
-    disp_array_flat[i,:] = np.array([u_x, u_y, u_z])
-disp_array = disp_array_flat.reshape(*input_image_undef_resampled.GetSize(), 3)
-
-
+path_to_def_field = os.path.join(output_dir, 'disps.mat')
+disp_array = sio.loadmat(path_to_def_field)['disps']
+disp_array_flat = disp_array.reshape(np.prod(disp_array.shape[:3]), disp_array.shape[3])
 #-- write deformation field as image
+#disp_array[:,:,:,0] = -disp_array[:,:,:,0]
 disp_array = np.swapaxes(disp_array, 0, 2)  # swap x, z
 # compose image
 disp_image = sitk.GetImageFromArray(disp_array, isVector=True)
-disp_image.SetOrigin(input_image_undef_resampled.GetOrigin())
-disp_image.SetSpacing(input_image_undef_resampled.GetSpacing())
-path_image_disp_nii = os.path.join(config.output_dir_testing, 'image_displacement.nii')
-path_image_disp_mha = os.path.join(config.output_dir_testing, 'image_displacement.mha')
-sitk.WriteImage(-disp_image, path_image_disp_nii)
-sitk.WriteImage(-disp_image, path_image_disp_mha)
+disp_image.SetOrigin(input_image_undef.GetOrigin())
+disp_image.SetSpacing(input_image_undef.GetSpacing())
+path_image_disp_nii = os.path.join(output_dir, 'image_displacement.nii')
+path_image_disp_mha = os.path.join(output_dir, 'image_displacement.mha')
+sitk.WriteImage(disp_image, path_image_disp_nii)
+sitk.WriteImage(disp_image, path_image_disp_mha)
+path_image_disp_inv_nii = os.path.join(output_dir, 'image_displacement_inv.nii')
+path_image_disp_inv_mha = os.path.join(output_dir, 'image_displacement_inv.mha')
+sitk.WriteImage(-disp_image, path_image_disp_inv_nii)
+sitk.WriteImage(-disp_image, path_image_disp_inv_mha)
 
-# #-- create reference image with new bounds []
-# coords_sel = coord_array_flat[np.where(value_array_flat.flatten()>0)]
-# displ_sel  = disp_array_flat[np.where(value_array_flat.flatten()>0)]
-# new_coords_flat = coords_sel + displ_sel
-# new_bounds = []
-# new_origin = []
-# new_dims = []
-# for i in range(3):
-#     min = new_coords_flat[:,i].min()
-#     max = new_coords_flat[:,i].max()
-#     new_bounds.append([min, max])
-#     new_origin.append(min)
-#     new_dims.append(int((max-min) / spacing_undef[i]))
-#
-# ref_image = sitk.Image(new_dims, input_image_undef.GetPixelIDValue())
-# ref_image.SetOrigin(new_origin)
-# ref_image.SetSpacing(input_image_undef.GetSpacing())
-# ref_image.SetDirection(input_image_undef.GetDirection())
-#
-# input_image_undef_resampled = sitk.Resample(input_image_undef, ref_image)
-# path_image_undef_resampled = os.path.join(config.output_dir_testing, 'input_image_undef_resampled.mha')
-# sitk.WriteImage(input_image_undef_resampled, path_image_undef_resampled)
+path_image_disp_inv_mha = os.path.join(output_dir, 'image_displacement_inv.mha')
 
 
-#
-#
-#
-# def resample_image(image_in, size_new):
-#     origin, size, spacing, extent, dim, vdim = get_measures_from_image(image_in)
-#     print("Downsampling image: %s -> %s" % (size, np.array2string(np.array(size_new))))
-#     image_new = sitk.Image(size_new, image_in.GetPixelIDValue())
-#     image_new.SetOrigin(image_in.GetOrigin())
-#     image_new.SetDirection(image_in.GetDirection())
-#     image_new.SetSpacing(
-#         [sz * spc / nsz for nsz, sz, spc in zip(size_new, size, spacing)])
-#     image_resampled = sitk.Resample(image_in, image_new)
-#     return image_resampled
+
+path_to_final_pos = os.path.join(output_dir, 'Target.mat')
+final_pos_array = sio.loadmat(path_to_final_pos)['TargetNodes']
+final_pos_array_flat = final_pos_array.reshape(np.prod(final_pos_array.shape[:3]), final_pos_array.shape[3])
+pos_min_final = final_pos_array_flat.min(axis=0)
+pos_max_final = final_pos_array_flat.max(axis=0)
+
+
+path_to_centerline = os.path.join(output_dir, 'OCTcenterline.mat')
+centerline_array = sio.loadmat(path_to_centerline)['coordsC']
+line = coord_array_to_vtk(centerline_array)
+path_to_centerline_vtp = os.path.join(output_dir, 'OCTcenterline.vtp')
+write_vtk_data(line, path_to_centerline_vtp)
+
+
+path_to_centerline = os.path.join(output_dir, 'XrayCenterline.mat')
+centerline_array = sio.loadmat(path_to_centerline)['A_new']
+line = coord_array_to_vtk(centerline_array)
+path_to_centerline_vtp = os.path.join(output_dir, 'XrayCenterline.vtp')
+write_vtk_data(line, path_to_centerline_vtp)
 
 
 #-- apply ANTS transformation
-path_image_def = os.path.join(config.output_dir_testing, 'output_image_def.mha')
-reg.ants_apply_transforms(input_img=path_image_undef_resampled, output_file=path_image_def,
-                          reference_img=path_image_undef_resampled,
-                          transforms=[path_image_disp_nii], dim=3)
+path_image_def = os.path.join(output_dir, 'output_image_def_inv.mha')
+reg.ants_apply_transforms(input_img=path_image_undef, output_file=path_image_def,
+                          reference_img=path_image_undef,
+                          transforms=[path_image_disp_inv_nii], dim=3, interpolation='GenericLabel')
 
-#-- create 3D mesh from deformed image
-meshing_params = {'global'     : {"cell_radius_edge_ratio": 2.1,
-                                "cell_size": 0.5,
-                                "facet_angle": 30.0,
-                                "facet_distance": 0.5,
-                                "facet_size": 2}
-                  }
-
-path_mesh_def = os.path.join(config.output_dir_testing, "mesh_3D.vtu")
-path_mesh_config = os.path.join(config.output_dir_testing, "meshing_params.xml")
-
-meshing.create_mesh_xml(path_to_image_in=path_image_def,
-                        path_to_mesh_out=path_mesh_def,
-                        tissues_dict=meshing_params,
-                        path_to_xml_file=path_mesh_config)
-
-meshing.mesh_image(path_to_meshtool_bin=config.path_to_meshtool_bin,
-                   path_to_meshtool_xsd=config.path_to_meshtool_xsd,
-                   path_to_config_file=path_mesh_config)
-
+path_image_def = os.path.join(output_dir, 'output_image_def.mha')
+reg.ants_apply_transforms(input_img=path_image_undef, output_file=path_image_def,
+                          reference_img=path_image_undef,
+                          transforms=[path_image_disp_nii], dim=3, interpolation='GenericLabel')

@@ -1,15 +1,19 @@
-import os
+import pathlib as pl
 
-base_path = os.path.dirname(__file__)
+base_path = pl.Path(__file__).parents[0]
 
-output_dir                              = os.path.join(base_path,  'output')
-output_dir_testing                      = os.path.join(output_dir, 'test_cases')
-output_dir_temp                         = os.path.join(output_dir, 'temp')
+output_dir                              = base_path.joinpath('output')
+output_dir_testing                      = output_dir.joinpath('sandbox')
+output_dir_analysis                     = output_dir.joinpath('analysis')
+output_dir_temp                         = output_dir.joinpath('temp')
 
-test_dir = os.path.join(base_path, 'test_cases')
-test_data_dir = os.path.join(test_dir, 'data')
+test_dir = base_path.joinpath('sandbox')
+test_data_dir = test_dir.joinpath('data')
+
+analysis_dir = base_path.joinpath('analysis')
+analysis_data_dir = analysis_dir.joinpath('data')
 
 # meshtool settings
-path_to_meshtool = '/home/fenics/software/MESHTOOL_source'
-path_to_meshtool_bin = os.path.join(path_to_meshtool, 'bin', 'MeshTool')
-path_to_meshtool_xsd = os.path.join(path_to_meshtool, 'src', 'xml-io', 'imaging_meshing_schema.xsd')
+path_to_meshtool = pl.Path('/home/fenics/software/MESHTOOL_source')
+path_to_meshtool_bin = path_to_meshtool.joinpath('bin', 'MeshTool').as_posix()
+path_to_meshtool_xsd = path_to_meshtool.joinpath('src', 'xml-io', 'imaging_meshing_schema.xsd').as_posix()
