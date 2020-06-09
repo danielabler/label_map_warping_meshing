@@ -3,8 +3,8 @@
 .DS_STORE
 .idea
 *.log
-/output/
-/output/*
+/output*/
+/output*/*
 .coverage
 
 #===== GENERAL PYTHON EXCLUDES
