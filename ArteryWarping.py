@@ -172,6 +172,20 @@ class ArteryWarping():
         extent_all = np.vstack([all_extents.min(axis=0), all_extents.max(axis=0)])
         return extent_all
 
+    def _create_surface_mesh_from_warped_image(self, description='resampled', target_spacing=[0.2, 0.2, 0.2]):
+        dir = self._create_dir_name(description=description, resolution=target_spacing, create=False)
+        warped_img_name = self._create_file_name(description=description + "_warped", resolution=target_spacing, ext='mha')
+        path_to_warped_img = dir.joinpath(warped_img_name)
+
+        surface_mesh_name_vtp = self._create_file_name(description=description+'_warped_surface', resolution=target_spacing, ext='vtp')
+        path_surface_mesh_vtp = dir.joinpath(surface_mesh_name_vtp)
+        utils.create_surfacemesh_from_labelmap(path_to_label_map=path_to_warped_img.as_posix(),
+                                               path_to_surface_mesh=path_surface_mesh_vtp.as_posix(), label_id=255)
+        surface_mesh_name_stl = self._create_file_name(description=description + '_warped_surface', resolution=target_spacing, ext='stl')
+        path_surface_mesh_stl = dir.joinpath(surface_mesh_name_stl)
+        utils.create_surfacemesh_from_labelmap(path_to_label_map=path_to_warped_img.as_posix(),
+                                               path_to_surface_mesh=path_surface_mesh_stl.as_posix(), label_id=255)
+
 
     def resample_oct_orig(self, target_spacing=[0.2, 0.2, 0.2]):
         oct_img_orig = sitk.ReadImage(self.path_to_oct_image_orig.as_posix())
@@ -182,6 +196,7 @@ class ArteryWarping():
         self._create_centerline(centerline_name='XrayCenterLine', target_spacing=target_spacing, description=description)
         self._create_displacement_imgs(target_spacing=target_spacing, description=description)
         self._create_warped_image(target_spacing=target_spacing, description=description)
+        self._create_surface_mesh_from_warped_image(target_spacing=target_spacing, description=description)
 
     def resize_from_displacement(self, padding=[0.5, 0.5, 0.5],
                                  reference_description='resampled', reference_spacing=[0.2, 0.2, 0.2],

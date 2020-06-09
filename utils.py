@@ -26,7 +26,7 @@ def get_measures_from_image(sitk_image):
     vdim = sitk_image.GetNumberOfComponentsPerPixel()
     return np.array(origin), size, np.array(spacing), extent, dim, vdim
 
-def resample_image(sitk_img, target_spacing, target_extent=None):
+def resample_image(sitk_img, target_spacing, target_extent=None, interpolation=sitk.sitkNearestNeighbor):
     #- get image dimensions, compute new dimensions
     origin, size, spacing, extent, dim, vdim = get_measures_from_image(sitk_img)
     if target_extent is None:
@@ -40,7 +40,7 @@ def resample_image(sitk_img, target_spacing, target_extent=None):
     output_direction = sitk_img.GetDirection()
     output_origin    = target_extent[0, :]
     # resample image
-    image_resampled = sitk.Resample(sitk_img, output_size, identity, sitk.sitkNearestNeighbor,
+    image_resampled = sitk.Resample(sitk_img, output_size, identity, interpolation,
                                     output_origin, target_spacing, output_direction)
     return image_resampled
 
@@ -92,13 +92,17 @@ def coord_array_to_vtk(coord_array):
 
 def write_vtk_data(_data, _path_to_file):
     fu.ensure_dir_exists(_path_to_file)
-    writer = vtk.vtkXMLDataSetWriter()
+    file_ext = fu.get_file_extension(_path_to_file)
+    if (file_ext == "stl"):
+        writer = vtk.vtkSTLWriter()
+        writer.SetFileTypeToBinary()
+    else:
+        writer = vtk.vtkXMLDataSetWriter()
     if vtk.VTK_MAJOR_VERSION <= 5:
         writer.SetInput(_data)
     else:
         writer.SetInputData(_data)
     writer.SetFileName(_path_to_file)
-    writer.Update()
     writer.Write()
 
 def load_matlab_array(path_to_file, array_names=None):
@@ -111,3 +115,37 @@ def load_matlab_array(path_to_file, array_names=None):
     elif len(arrays)==0:
         arrays=None
     return arrays
+
+def load_image(path_to_image):
+    file_ext = fu.get_file_extension(path_to_image)
+    if (file_ext=="vti"):
+        print("Opening as  '.vti' file.")
+        image_reader = vtk.vtkXMLImageDataReader()
+    elif (file_ext=="nii"):
+        print("Opening as  '.nii' file.")
+        image_reader = vtk.vtkNIFTIImageReader()
+    else:
+        print("Attempting to load as other vtk image.")
+        reader_factory = vtk.vtkImageReader2Factory()
+        image_reader = reader_factory.CreateImageReader2(path_to_image)
+    image_reader.SetFileName(path_to_image)
+    image_reader.Update()
+    image = image_reader.GetOutput()
+    return image
+
+
+def create_surfacemesh_from_labelmap(path_to_label_map, path_to_surface_mesh, label_id):
+    print("-- creating surface mesh from labelmap '%s'"%path_to_label_map)
+    vtk_img = load_image(path_to_label_map)
+    filter = vtk.vtkDiscreteMarchingCubes()
+    filter.SetInputData(vtk_img)
+    filter.GenerateValues(label_id, label_id, label_id)
+    filter.Update()
+    # filter = vtk.vtkContourFilter()
+    # filter.SetInputData(vtk_img)
+    # filter.GenerateValues(label_id, label_id, label_id)
+    # filter.Update()
+    surface_vtp = filter.GetOutput()
+    print("-- writing surface mesh to '%s'"%path_to_surface_mesh)
+    write_vtk_data(surface_vtp, path_to_surface_mesh)
+    return surface_vtp
