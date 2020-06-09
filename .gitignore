@@ -1,12 +1,4 @@
 
-#===== PROJECT EXCLUDES
-.DS_STORE
-.idea
-*.log
-/output*/
-/output*/*
-.coverage
-
 #===== GENERAL PYTHON EXCLUDES
 # Byte-compiled / optimized / DLL files
 __pycache__/
