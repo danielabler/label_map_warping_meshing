@@ -11,9 +11,6 @@ output_dir_temp                         = output_dir.joinpath('temp')
 output_dir_temp.mkdir(exist_ok=True)
 
 
-test_dir = base_path.joinpath('sandbox')
-test_data_dir = test_dir.joinpath('data')
-
 analysis_dir = base_path.joinpath('analysis')
 analysis_data_dir = analysis_dir.joinpath('data')
 
