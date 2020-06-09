@@ -3,9 +3,13 @@ import pathlib as pl
 base_path = pl.Path(__file__).parents[0]
 
 output_dir                              = base_path.joinpath('output')
+output_dir.mkdir(exist_ok=True)
 output_dir_testing                      = output_dir.joinpath('sandbox')
 output_dir_analysis                     = output_dir.joinpath('analysis')
+output_dir_analysis.mkdir(exist_ok=True)
 output_dir_temp                         = output_dir.joinpath('temp')
+output_dir_temp.mkdir(exist_ok=True)
+
 
 test_dir = base_path.joinpath('sandbox')
 test_data_dir = test_dir.joinpath('data')

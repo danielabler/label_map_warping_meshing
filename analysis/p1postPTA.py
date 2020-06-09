@@ -5,7 +5,7 @@ from ArteryWarping import ArteryWarping
 
 base_path = config.output_dir_analysis.joinpath('patient_01', 'postPTA')
 aw = ArteryWarping(output_path=base_path)
-aw.set_oct_image(path_to_oct_image=config.analysis_data_dir.joinpath('p1postPTACropped.mha'))
+aw.set_oct_image(path_to_oct_image=config.analysis_data_dir.joinpath('p1postPTA_compressed.mha'))
 
 #%% (1) Downsample original OCT image & produce Matlab output
 aw.resample_oct_orig(target_spacing=[0.2, 0.2, 0.2])
