@@ -5,6 +5,8 @@
 *.log
 /output*/
 /output*/*
+/sandbox/
+/sandbox/*
 .coverage
 
 
