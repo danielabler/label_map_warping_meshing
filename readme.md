@@ -47,9 +47,11 @@ exit
   1. Downsample original OCT image & produce Matlab output:
      - From this output we compute displacement.
   2. Resize original OCT image based on displacement field:
-     - Use coarse displacement field to identify approximate dimensions of image after warping.
-     - Create image and matlab output for resized image
-  3. Warp image based on displacement field
+     This requires the `disps.mat` file to be present in the respective folder.
+     - Uses coarse displacement field to identify approximate dimensions of image after warping.
+     - Creates image and matlab output for resized image
+  3. Warp image based on displacement field:
+     This requires `disps.mat` as well as centerlines `OCTCenterLine.mat` and `XrayCenterLine.mat` to be present in respective folder.
      - create high-res warped image using high-res displacement field
 
   These steps are outlined in any of the example files in <repository/analysis/*.py> .
@@ -59,6 +61,7 @@ exit
     ```shell script
     python3 analysis/pptT_prePTA.py
     ```
+  When running the code with the singularity image mentioned above, make sure to use `python3`, not `python`.
 
 - leave an interactive singularity session:
     ```shell script
