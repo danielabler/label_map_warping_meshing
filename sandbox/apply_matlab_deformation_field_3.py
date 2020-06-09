@@ -335,3 +335,5 @@ image_oct_min_pos = np.array([3.3152397, 2.976531 , 0.])
 image_oct_max_pos = np.array([ 8.1187449,  7.9647864, 49.4 ])
 all_extents = np.vstack([image_ref_min_pos, image_ref_max_pos, image_oct_min_pos, image_oct_max_pos])
 extent_all  = np.vstack([all_extents.min(axis=0), all_extents.max(axis=0)])
+
+
