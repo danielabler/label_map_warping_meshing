@@ -52,7 +52,7 @@ class ArteryWarping():
         image_name = self._create_file_name(description=description, resolution=target_spacing, ext='mha')
         path_to_image_resampled = dir.joinpath(image_name)
         print("    -- Saving resampled image as '%s'"%path_to_image_resampled)
-        sitk.WriteImage(img_resampled, path_to_image_resampled.as_posix())
+        sitk.WriteImage(img_resampled, path_to_image_resampled.as_posix(), True)
         # create matlab array
         print("  -- Creating matlab array")
         coord_array, value_array = utils.get_coord_value_array_for_image(img_resampled, flat=False)
@@ -172,7 +172,7 @@ class ArteryWarping():
         extent_all = np.vstack([all_extents.min(axis=0), all_extents.max(axis=0)])
         return extent_all
 
-    def _create_surface_mesh_from_warped_image(self, description='resampled', target_spacing=[0.2, 0.2, 0.2]):
+    def _create_surface_mesh_from_warped_image(self, description='resampled', target_spacing=[0.2, 0.2, 0.2], label_id=1):
         dir = self._create_dir_name(description=description, resolution=target_spacing, create=False)
         warped_img_name = self._create_file_name(description=description + "_warped", resolution=target_spacing, ext='mha')
         path_to_warped_img = dir.joinpath(warped_img_name)
@@ -180,11 +180,11 @@ class ArteryWarping():
         surface_mesh_name_vtp = self._create_file_name(description=description+'_warped_surface', resolution=target_spacing, ext='vtp')
         path_surface_mesh_vtp = dir.joinpath(surface_mesh_name_vtp)
         utils.create_surfacemesh_from_labelmap(path_to_label_map=path_to_warped_img.as_posix(),
-                                               path_to_surface_mesh=path_surface_mesh_vtp.as_posix(), label_id=255)
+                                               path_to_surface_mesh=path_surface_mesh_vtp.as_posix(), label_id=label_id)
         surface_mesh_name_stl = self._create_file_name(description=description + '_warped_surface', resolution=target_spacing, ext='stl')
         path_surface_mesh_stl = dir.joinpath(surface_mesh_name_stl)
         utils.create_surfacemesh_from_labelmap(path_to_label_map=path_to_warped_img.as_posix(),
-                                               path_to_surface_mesh=path_surface_mesh_stl.as_posix(), label_id=255)
+                                               path_to_surface_mesh=path_surface_mesh_stl.as_posix(), label_id=label_id)
 
 
     def resample_oct_orig(self, target_spacing=[0.2, 0.2, 0.2]):
@@ -196,7 +196,8 @@ class ArteryWarping():
         self._create_centerline(centerline_name='XrayCenterLine', target_spacing=target_spacing, description=description)
         self._create_displacement_imgs(target_spacing=target_spacing, description=description)
         self._create_warped_image(target_spacing=target_spacing, description=description)
-        self._create_surface_mesh_from_warped_image(target_spacing=target_spacing, description=description)
+        # surface mesh creation results in huge files ... creation in paraview works better
+        #self._create_surface_mesh_from_warped_image(target_spacing=target_spacing, description=description)
 
     def resize_from_displacement(self, padding=[0.5, 0.5, 0.5],
                                  reference_description='resampled', reference_spacing=[0.2, 0.2, 0.2],
