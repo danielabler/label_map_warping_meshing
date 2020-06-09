@@ -155,10 +155,10 @@ class ArteryWarping():
         image_ref_max_pos = image_ref_coord_array_flat_lumen.max(axis=0)
         return image_ref_min_pos, image_ref_max_pos
 
-    def _get_extent_all_from_displacement(self, description='resampled', target_spacing=[0.2, 0.2, 0.2]):
+    def _get_extent_all_from_displacement(self, description='resampled', target_spacing=[0.2, 0.2, 0.2], label_id=1):
         # get structure bounds in straightened configuration
         ref_img, path_to_ref_image = self._get_ref_image(description=description, target_spacing=target_spacing)
-        image_ref_min_pos, image_ref_max_pos = self._extract_structure_bounds_from_labelmap(ref_img, label_id=255)
+        image_ref_min_pos, image_ref_max_pos = self._extract_structure_bounds_from_labelmap(ref_img, label_id=label_id)
         # get structure bounds from dispalcement field
         disp_array, path_to_disp_mat = self._get_displacement_array(description=description, target_spacing=target_spacing)
         dir = self._create_dir_name(description=description, resolution=target_spacing, create=False)
@@ -166,7 +166,7 @@ class ArteryWarping():
         path_to_coords_values = dir.joinpath(coords_values_name)
         coords_array, values_array = utils.load_matlab_array(path_to_coords_values.as_posix(),['coordinates', 'values'])
         image_def_min_pos, image_def_max_pos = \
-            self._extract_structure_bounds_from_coords_and_displacement(coords_array, values_array, disp_array, label_id=1)
+            self._extract_structure_bounds_from_coords_and_displacement(coords_array, values_array, disp_array, label_id=label_id)
         # combine extents
         all_extents = np.vstack([image_ref_min_pos, image_ref_max_pos, image_def_min_pos, image_def_max_pos])
         extent_all = np.vstack([all_extents.min(axis=0), all_extents.max(axis=0)])
@@ -200,8 +200,10 @@ class ArteryWarping():
 
     def resize_from_displacement(self, padding=[0.5, 0.5, 0.5],
                                  reference_description='resampled', reference_spacing=[0.2, 0.2, 0.2],
-                                 target_description='resized_resampled', target_spacing=[0.2, 0.2, 0.2]):
-        extent_all = self._get_extent_all_from_displacement(description=reference_description, target_spacing=reference_spacing)
+                                 target_description='resized_resampled', target_spacing=[0.2, 0.2, 0.2],
+                                 label_id=1 ):
+        extent_all = self._get_extent_all_from_displacement(description=reference_description, target_spacing=reference_spacing,
+                                                            label_id=label_id)
         img_oct = sitk.ReadImage(self.path_to_oct_image_orig.as_posix())
         padding = np.array(padding)
         extent_all_pad = np.vstack([extent_all[0] - padding, extent_all[1] + padding])
